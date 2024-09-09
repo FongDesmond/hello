@@ -4,11 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-
-lr_loaded = load('lr.joblib')
-nb_loaded = load('nb.joblib')
-svm_loaded = load('svm.joblib')
-cv_loaded = load('cv.joblib')
+# Load the single classifier model
+clf_loaded = load('clf.joblib')
 
 def main():
     st.title("Sentiment Analysis App")
@@ -40,20 +37,15 @@ def main():
             st.error("Please enter a review or upload a file for prediction.")
 
 def predict_and_display(reviews):
-    transformed_reviews = cv_loaded.transform(reviews)
-    results_lr = lr_loaded.predict(transformed_reviews)
-    results_nb = nb_loaded.predict(transformed_reviews)
-    results_svm = svm_loaded.predict(transformed_reviews)
+    # Use the loaded classifier to transform and predict
+    transformed_reviews = clf_loaded.named_steps['vectorizer'].transform(reviews)
+    predictions = clf_loaded.predict(transformed_reviews)
     
-    sentiment_lr = ["Positive" if res else "Negative" for res in results_lr]
-    sentiment_nb = ["Positive" if res else "Negative" for res in results_nb]
-    sentiment_svm = ["Positive" if res else "Negative" for res in results_svm]
+    sentiments = ["Positive" if res else "Negative" for res in predictions]
     
     result_df = pd.DataFrame({
         'Review': reviews,
-        'LR Sentiment': sentiment_lr,
-        'NB Sentiment': sentiment_nb,
-        'SVM Sentiment': sentiment_svm
+        'Sentiment': sentiments
     })
 
     with st.expander("Show Prediction Results"):
@@ -62,14 +54,11 @@ def predict_and_display(reviews):
    
     if len(reviews) > 1:
         st.write("Histogram of Predictions:")
-        fig, ax = plt.subplots(3, 1, figsize=(8, 12))
-        pd.Series(sentiment_lr).value_counts().plot(kind='bar', ax=ax[0], color=['blue']).set_title("LR Sentiment Distribution")
-        pd.Series(sentiment_nb).value_counts().plot(kind='bar', ax=ax[1], color=['green']).set_title("NB Sentiment Distribution")
-        pd.Series(sentiment_svm).value_counts().plot(kind='bar', ax=ax[2], color=['red']).set_title("SVM Sentiment Distribution")
-        for a in ax:
-            a.set_xlabel("Sentiment")
-            a.set_ylabel("Count")
-            a.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+        pd.Series(sentiments).value_counts().plot(kind='bar', ax=ax, color=['blue']).set_title("Sentiment Distribution")
+        ax.set_xlabel("Sentiment")
+        ax.set_ylabel("Count")
+        ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
         plt.tight_layout()
         st.pyplot(fig)
 
