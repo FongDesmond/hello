@@ -3,8 +3,12 @@ from joblib import load
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from sklearn.feature_extraction.text import CountVectorizer
 
-# Load the single classifier model
+# Initialize the vectorizer
+vectorizer = CountVectorizer()
+
+# Load the classifier model
 clf_loaded = load('clf.joblib')
 
 def main():
@@ -15,17 +19,17 @@ def main():
         user_input = st.text_area("Enter a review:")
         uploaded_file = st.file_uploader("Or upload a text, CSV, or Excel file:", type=['txt', 'csv', 'xlsx'])
 
-
+    # Process the uploaded file or text input
     if uploaded_file is not None:
         if uploaded_file.type == "text/plain":
             content = uploaded_file.read().decode("utf-8")
-            reviews = content.split('\n') 
+            reviews = content.split('\n')
         elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
             df = pd.read_excel(uploaded_file)
-            reviews = df.iloc[:,0].tolist() 
+            reviews = df.iloc[:, 0].tolist() 
         elif uploaded_file.type == "text/csv":
             df = pd.read_csv(uploaded_file)
-            reviews = df.iloc[:,0].tolist()
+            reviews = df.iloc[:, 0].tolist()
     else:
         reviews = [user_input] if user_input else []
 
@@ -39,12 +43,16 @@ def main():
             st.error("Please enter a review or upload a file for prediction.")
 
 def predict_and_display(reviews):
-    # Use the loaded classifier to transform and predict
-    transformed_reviews = clf_loaded.named_steps['vectorizer'].transform(reviews)
+    # Fit the vectorizer on the input reviews and transform them
+    transformed_reviews = vectorizer.fit_transform(reviews)
+
+    # Predict using the classifier
     predictions = clf_loaded.predict(transformed_reviews)
     
+    # Map predictions to sentiment labels
     sentiments = ["Positive" if res else "Negative" for res in predictions]
     
+    # Display results in a table
     result_df = pd.DataFrame({
         'Review': reviews,
         'Sentiment': sentiments
@@ -53,7 +61,7 @@ def predict_and_display(reviews):
     with st.expander("Show Prediction Results"):
         st.table(result_df)
 
-   
+    # Display a histogram of the results if there are multiple reviews
     if len(reviews) > 1:
         st.write("Histogram of Predictions:")
         fig, ax = plt.subplots(1, 1, figsize=(8, 6))
