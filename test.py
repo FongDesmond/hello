@@ -1,4 +1,5 @@
 import streamlit as st
+import joblib
 from joblib import load
 import pandas as pd
 import matplotlib.pyplot as plt
