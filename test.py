@@ -29,7 +29,9 @@ def main():
     else:
         reviews = [user_input] if user_input else []
 
-  
+    # Ensure all reviews are strings
+    reviews = [str(review) for review in reviews]
+
     if st.sidebar.button('Predict'):
         if reviews:
             predict_and_display(reviews)
