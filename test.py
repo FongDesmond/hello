@@ -1,72 +1,68 @@
-import streamlit as st
-from joblib import load
-import pandas as pd
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import os
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
+import seaborn as sns
+import joblib
 
-# Load the pre-trained classifier model (which includes the vectorizer)
-clf_loaded = load('clf.joblib')
+# Load the data
+data = pd.read_csv('spam.csv')
 
-def main():
-    st.title("Sentiment Analysis App")
-    st.write("Enter a review or upload a text file/CSV file to predict sentiments.")
+# Clean the data and add 'Spam' column
+data['Spam'] = data['Category'].apply(lambda x: 1 if x == 'spam' else 0)
 
-    with st.sidebar:
-        user_input = st.text_area("Enter a review:")
-        uploaded_file = st.file_uploader("Or upload a text, CSV, or Excel file:", type=['txt', 'csv', 'xlsx'])
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(data.Message, data.Spam, test_size=0.25)
 
-    # Process the uploaded file or text input
-    if uploaded_file is not None:
-        if uploaded_file.type == "text/plain":
-            content = uploaded_file.read().decode("utf-8")
-            reviews = content.split('\n')
-        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-            df = pd.read_excel(uploaded_file)
-            reviews = df.iloc[:, 0].tolist() 
-        elif uploaded_file.type == "text/csv":
-            df = pd.read_csv(uploaded_file)
-            reviews = df.iloc[:, 0].tolist()
-    else:
-        reviews = [user_input] if user_input else []
+# Using CountVectorizer explicitly
+cv = CountVectorizer(stop_words='english')
 
-    # Ensure all reviews are strings
-    reviews = [str(review) for review in reviews]
+# Transform the data using CountVectorizer
+X_train_cv = cv.fit_transform(X_train)
+X_test_cv = cv.transform(X_test)
 
-    if st.sidebar.button('Predict'):
-        if reviews:
-            predict_and_display(reviews)
-        else:
-            st.error("Please enter a review or upload a file for prediction.")
+# Print the dimensions of the transformed data
+print(X_train_cv.toarray().shape)
 
-def predict_and_display(reviews):
-    # Use the vectorizer from the pre-trained classifier model to transform the input
-    transformed_reviews = clf_loaded.named_steps['vectorizer'].transform(reviews)
+# Initialize the Naive Bayes model
+nb = MultinomialNB()
 
-    # Predict using the classifier
-    predictions = clf_loaded.predict(transformed_reviews)
-    
-    # Map predictions to sentiment labels
-    sentiments = ["Positive" if res else "Negative" for res in predictions]
-    
-    # Display results in a table
-    result_df = pd.DataFrame({
-        'Review': reviews,
-        'Sentiment': sentiments
-    })
+# Train the model with transformed data
+nb.fit(X_train_cv, y_train)
 
-    with st.expander("Show Prediction Results"):
-        st.table(result_df)
+# Make predictions on the test data
+y_pred = nb.predict(X_test_cv)
 
-    # Display a histogram of the results if there are multiple reviews
-    if len(reviews) > 1:
-        st.write("Histogram of Predictions:")
-        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-        pd.Series(sentiments).value_counts().plot(kind='bar', ax=ax, color=['blue']).set_title("Sentiment Distribution")
-        ax.set_xlabel("Sentiment")
-        ax.set_ylabel("Count")
-        ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-        plt.tight_layout()
-        st.pyplot(fig)
+# Evaluate the model
+accuracy = nb.score(X_test_cv, y_test)
+print(f'Model accuracy: {accuracy}')
 
-if __name__ == '__main__':
-    main()
+# Save the model and vectorizer using joblib
+joblib.dump(nb, 'nb_model.joblib')
+joblib.dump(cv, 'vectorizer.joblib')
+
+# Plotting confusion matrix
+cm = confusion_matrix(y_test, y_pred)
+sns.heatmap(cm, xticklabels=['predicted_ham', 'predicted_spam'],
+            yticklabels=['actual_ham', 'actual_spam'], annot=True, fmt='d',
+            annot_kws={'fontsize': 20}, cmap="YlGnBu")
+plt.show()
+
+# Extracting values from the confusion matrix
+true_neg, false_pos, false_neg, true_pos = cm.ravel()
+
+# Calculating metrics
+accuracy = round((true_pos + true_neg) / (true_pos + true_neg + false_pos + false_neg), 3)
+precision = round((true_pos) / (true_pos + false_pos), 3)
+recall = round((true_pos) / (true_pos + false_neg), 3)
+f1 = round(2 * (precision * recall) / (precision + recall), 3)
+
+# Displaying the evaluation metrics
+print(f'Accuracy: {accuracy}')
+print(f'Precision: {precision}')
+print(f'Recall: {recall}')
+print(f'F1 Score: {f1}')
