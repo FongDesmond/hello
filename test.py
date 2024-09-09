@@ -3,12 +3,8 @@ from joblib import load
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from sklearn.feature_extraction.text import CountVectorizer
 
-# Initialize the vectorizer
-vectorizer = CountVectorizer()
-
-# Load the classifier model
+# Load the pre-trained classifier model (which includes the vectorizer)
 clf_loaded = load('clf.joblib')
 
 def main():
@@ -43,8 +39,8 @@ def main():
             st.error("Please enter a review or upload a file for prediction.")
 
 def predict_and_display(reviews):
-    # Fit the vectorizer on the input reviews and transform them
-    transformed_reviews = vectorizer.fit_transform(reviews)
+    # Use the vectorizer from the pre-trained classifier model to transform the input
+    transformed_reviews = clf_loaded.named_steps['vectorizer'].transform(reviews)
 
     # Predict using the classifier
     predictions = clf_loaded.predict(transformed_reviews)
