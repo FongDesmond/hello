@@ -1,4 +1,4 @@
-!pip install joblib
+
 
 import streamlit as st
 from joblib import load
