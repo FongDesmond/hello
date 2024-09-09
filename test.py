@@ -6,7 +6,7 @@ import matplotlib.ticker as ticker
 
 # Load the single classifier model
 clf_loaded = load('clf.joblib')
-cv = load('cv.joblib')
+
 def main():
     st.title("Sentiment Analysis App")
     st.write("Enter a review or upload a text file/CSV file to predict sentiments.")
@@ -40,7 +40,7 @@ def main():
 
 def predict_and_display(reviews):
     # Use the loaded classifier to transform and predict
-    transformed_reviews = cv.named_steps['vectorizer'].transform(reviews)
+    transformed_reviews = clf_loaded.named_steps['vectorizer'].transform(reviews)
     predictions = clf_loaded.predict(transformed_reviews)
     
     sentiments = ["Positive" if res else "Negative" for res in predictions]
