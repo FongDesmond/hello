@@ -1,6 +1,6 @@
 pip install joblib
-import streamlit as st
 
+import streamlit as st
 from joblib import load
 import pandas as pd
 import matplotlib.pyplot as plt
